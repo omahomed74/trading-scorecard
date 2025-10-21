@@ -6,12 +6,103 @@ from datetime import datetime, timedelta
 import json
 import os
 
-# Page config
+# Page config with custom theme
 st.set_page_config(
     page_title="Trading Scorecard - Bobblehead Tracker",
     page_icon="📊",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
+
+# Custom CSS for better styling
+st.markdown("""
+<style>
+    /* Main background and text */
+    .main {
+        background-color: #0e1117;
+    }
+    
+    /* Score card styling */
+    .score-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        margin: 1rem 0;
+    }
+    
+    .score-card-success {
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+    }
+    
+    .score-card-warning {
+        background: linear-gradient(135deg, #f12711 0%, #f5af19 100%);
+    }
+    
+    /* Section headers */
+    .section-header {
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 1.5rem 0 1rem 0;
+        border-left: 5px solid;
+    }
+    
+    .section-pre {
+        background-color: rgba(255, 193, 7, 0.1);
+        border-color: #ffc107;
+    }
+    
+    .section-exec {
+        background-color: rgba(76, 175, 80, 0.1);
+        border-color: #4caf50;
+    }
+    
+    .section-emot {
+        background-color: rgba(33, 150, 243, 0.1);
+        border-color: #2196f3;
+    }
+    
+    .section-post {
+        background-color: rgba(156, 39, 176, 0.1);
+        border-color: #9c27b0;
+    }
+    
+    /* Better checkbox styling */
+    .stCheckbox {
+        padding: 0.5rem 0;
+    }
+    
+    /* Metric cards */
+    [data-testid="stMetricValue"] {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    
+    /* Buttons */
+    .stButton>button {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 10px;
+    }
+    
+    /* Progress bars */
+    .progress-bar {
+        height: 8px;
+        background-color: rgba(255,255,255,0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0.5rem 0;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Initialize session state for data persistence
 if 'scorecards' not in st.session_state:
@@ -32,45 +123,69 @@ def save_data():
 # Load existing data
 load_data()
 
-# Title and header
-st.title("📊 Daily Trading Scorecard")
-st.markdown("*Bobblehead Method - Focus on Expected Value, Not P&L*")
+# Header
+st.markdown("# 📊 Trading Scorecard")
+st.markdown("### *Bobblehead Method - Focus on Expected Value, Not P&L*")
 st.markdown("---")
 
-# Sidebar navigation
-page = st.sidebar.radio("Navigate", ["📝 Daily Entry", "📈 Dashboard", "📅 History", "💡 About"])
+# Sidebar navigation with custom styling
+with st.sidebar:
+    st.markdown("## 🧭 Navigate")
+    page = st.radio(
+        "",
+        ["📝 Daily Entry", "📈 Dashboard", "📅 History", "💡 About"],
+        label_visibility="collapsed"
+    )
+    
+    st.markdown("---")
+    st.markdown("### 🎯 Quick Stats")
+    if st.session_state.scorecards:
+        df = pd.DataFrame(st.session_state.scorecards)
+        st.metric("Total Entries", len(df))
+        st.metric("Avg Score", f"{df['total_score'].mean():.1f}/20")
+        success_rate = (df['total_score'] >= 15).sum()
+        st.metric("Success Rate", f"{success_rate}/{len(df)}")
+    else:
+        st.info("No data yet")
 
 # ========== DAILY ENTRY PAGE ==========
 if page == "📝 Daily Entry":
-    st.header("Today's Scorecard")
-    
     col1, col2 = st.columns([2, 1])
     
     with col1:
         # Basic Info
-        st.subheader("Basic Information")
+        st.markdown("## 📋 Basic Information")
         entry_date = st.date_input("Date", datetime.now())
-        market_phase = st.selectbox(
-            "Market Phase",
-            ["Correction Mode", "Post-FTD Recovery", "Window Closed", "Window Open", "PowerTrend"]
-        )
-        pnl = st.number_input("P&L (optional - for reference only)", value=0.0, format="%.2f")
+        
+        col_a, col_b = st.columns(2)
+        with col_a:
+            market_phase = st.selectbox(
+                "Market Phase",
+                ["Correction Mode", "Post-FTD Recovery", "Window Closed", "Window Open", "PowerTrend"]
+            )
+        with col_b:
+            pnl = st.number_input("P&L (optional)", value=0.0, format="%.2f", help="For reference only")
         
         st.markdown("---")
         
-        # Pre-Market Preparation (4 points)
-        st.subheader("🌅 Pre-Market Preparation (/4)")
-        prep1 = st.checkbox("✓ Completed market phase check (identified window status, exposure limits)")
-        prep2 = st.checkbox("✓ Reviewed all existing positions systematically (checked 21-EMA, set alerts)")
-        prep3 = st.checkbox("✓ Emotional state check completed (rated 1-10, proceeded only if ≤6)")
-        prep4 = st.checkbox("✓ Had clear trading plan before open (knew what to buy/sell and why)")
+        # Pre-Market Preparation (2 points)
+        st.markdown('<div class="section-header section-pre"><h3>🌅 Pre-Market Preparation (/2)</h3></div>', unsafe_allow_html=True)
+        st.markdown("*Before market open*")
         
-        prep_score = sum([prep1, prep2, prep3, prep4])
+        prep1 = st.checkbox("✓ Emotional state check completed (rated 1-10, proceeded only if ≤6)")
+        prep2 = st.checkbox("✓ Had clear trading plan before open (knew what to buy/sell and why)")
+        
+        prep_score = sum([prep1, prep2])
+        prep_pct = (prep_score / 2) * 100
+        st.markdown(f'<div class="progress-bar"><div class="progress-fill" style="width: {prep_pct}%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div></div>', unsafe_allow_html=True)
+        st.markdown(f"**Score: {prep_score}/2**")
         
         st.markdown("---")
         
         # Trade Execution Discipline (8 points)
-        st.subheader("⚡ Trade Execution Discipline (/8)")
+        st.markdown('<div class="section-header section-exec"><h3>⚡ Trade Execution Discipline (/8)</h3></div>', unsafe_allow_html=True)
+        st.markdown("*During market hours*")
+        
         exec1 = st.checkbox("✓ Every entry had a specific rule (BR1-BR9, not 'it looked good')")
         exec2 = st.checkbox("✓ Position sizing calculated properly (within limits, proper risk %)")
         exec3 = st.checkbox("✓ Stop losses set on ALL positions (7% max, never moved wider)")
@@ -81,104 +196,147 @@ if page == "📝 Daily Entry":
         exec8 = st.checkbox("✓ All exits followed specific rules (SR1-SR9, not emotional)")
         
         exec_score = sum([exec1, exec2, exec3, exec4, exec5, exec6, exec7, exec8])
+        exec_pct = (exec_score / 8) * 100
+        st.markdown(f'<div class="progress-bar"><div class="progress-fill" style="width: {exec_pct}%; background: linear-gradient(90deg, #4caf50, #8bc34a);"></div></div>', unsafe_allow_html=True)
+        st.markdown(f"**Score: {exec_score}/8**")
         
         st.markdown("---")
         
-        # Emotional Management (5 points)
-        st.subheader("🧠 Emotional Management (/5)")
+        # Emotional Management (4 points)
+        st.markdown('<div class="section-header section-emot"><h3>🧠 Emotional Management (/4)</h3></div>', unsafe_allow_html=True)
+        st.markdown("*During trading day*")
+        
         emot1 = st.checkbox("✓ Did not trade after significant loss without 2hr buffer")
         emot2 = st.checkbox("✓ Did not make impulsive decisions based on P&L (green or red)")
-        emot3 = st.checkbox("✓ Did not compare my performance to others today")
-        emot4 = st.checkbox("✓ Did not obsess over 'what could have been' (stocks that ran)")
-        emot5 = st.checkbox("✓ Maintained process focus over outcome focus")
+        emot3 = st.checkbox("✓ Did not obsess over 'what could have been' (stocks that ran)")
+        emot4 = st.checkbox("✓ Maintained process focus over outcome focus")
         
-        emot_score = sum([emot1, emot2, emot3, emot4, emot5])
+        emot_score = sum([emot1, emot2, emot3, emot4])
+        emot_pct = (emot_score / 4) * 100
+        st.markdown(f'<div class="progress-bar"><div class="progress-fill" style="width: {emot_pct}%; background: linear-gradient(90deg, #2196f3, #03a9f4);"></div></div>', unsafe_allow_html=True)
+        st.markdown(f"**Score: {emot_score}/4**")
         
         st.markdown("---")
         
-        # Post-Market Review (3 points)
-        st.subheader("📝 Post-Market Review (/3)")
-        post1 = st.checkbox("✓ Journaled all trades with rules used (not just P&L)")
-        post2 = st.checkbox("✓ Identified one thing I did well today")
-        post3 = st.checkbox("✓ Identified one specific improvement for tomorrow")
+        # Post-Market Review (6 points)
+        st.markdown('<div class="section-header section-post"><h3>📝 Post-Market Review (/6)</h3></div>', unsafe_allow_html=True)
+        st.markdown("*After market close*")
         
-        post_score = sum([post1, post2, post3])
+        post1 = st.checkbox("✓ Journaled all trades with rules used (not just P&L)")
+        post2 = st.checkbox("✓ Assessed market condition and confirmed trading window status")
+        post3 = st.checkbox("✓ Reviewed all existing positions systematically (checked 21-EMA, set alerts)")
+        post4 = st.checkbox("✓ Reviewed all stops and calculated open risk ($ and %)")
+        post5 = st.checkbox("✓ Completed daily statistics (updated equity curve and levels)")
+        post6 = st.checkbox("✓ Ran market screens and prepared watchlist for next trading day")
+        
+        post_score = sum([post1, post2, post3, post4, post5, post6])
+        post_pct = (post_score / 6) * 100
+        st.markdown(f'<div class="progress-bar"><div class="progress-fill" style="width: {post_pct}%; background: linear-gradient(90deg, #9c27b0, #e91e63);"></div></div>', unsafe_allow_html=True)
+        st.markdown(f"**Score: {post_score}/6**")
         
         st.markdown("---")
         
         # Reflections
-        st.subheader("💭 Daily Reflections")
-        thing_well = st.text_area("One thing I did WELL today:", height=80)
-        thing_improve = st.text_area("One thing to IMPROVE tomorrow:", height=80)
-        what_learned = st.text_area("What I LEARNED from losses/mistakes today:", height=100)
+        st.markdown("## 💭 Daily Reflections")
+        thing_well = st.text_area("One thing I did WELL today:", height=80, placeholder="Be specific - what process did you follow correctly?")
+        thing_improve = st.text_area("One thing to IMPROVE tomorrow:", height=80, placeholder="Make it actionable - what will you do differently?")
+        what_learned = st.text_area("What I LEARNED from losses/mistakes today:", height=100, placeholder="How did today's challenges make you a better trader?")
     
     with col2:
         # Live Score Display
-        total_score = prep_score + exec_score + post_score + emot_score
+        total_score = prep_score + exec_score + emot_score + post_score
         
         st.markdown("### 🎯 Live Score")
         
-        # Big score display
+        # Determine grade and styling
         if total_score >= 18:
-            color = "#2ecc71"
+            color = "#4caf50"
+            gradient = "linear-gradient(135deg, #56ab2f 0%, #a8e063 100%)"
             grade = "A+"
             bobblehead = "⬆️⬆️⬆️"
             message = "Elite execution!"
+            emoji = "🏆"
         elif total_score >= 15:
-            color = "#27ae60"
+            color = "#8bc34a"
+            gradient = "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)"
             grade = "A"
             bobblehead = "⬆️⬆️"
             message = "Solid day!"
+            emoji = "✅"
         elif total_score >= 12:
-            color = "#f39c12"
+            color = "#ffc107"
+            gradient = "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
             grade = "B"
             bobblehead = "⬆️"
             message = "Good day"
+            emoji = "👍"
         elif total_score >= 9:
-            color = "#e67e22"
+            color = "#ff9800"
+            gradient = "linear-gradient(135deg, #fa709a 0%, #fee140 100%)"
             grade = "C"
             bobblehead = "➡️"
             message = "Maintained EV"
+            emoji = "😐"
         elif total_score >= 6:
-            color = "#e74c3c"
+            color = "#ff5722"
+            gradient = "linear-gradient(135deg, #f12711 0%, #f5af19 100%)"
             grade = "D"
             bobblehead = "⬇️"
             message = "Below standard"
+            emoji = "⚠️"
         else:
-            color = "#c0392b"
+            color = "#f44336"
+            gradient = "linear-gradient(135deg, #c31432 0%, #240b36 100%)"
             grade = "F"
             bobblehead = "⬇️⬇️"
             message = "Poor execution"
+            emoji = "❌"
         
+        # Big score card
         st.markdown(f"""
-        <div style='background-color: {color}; padding: 20px; border-radius: 10px; text-align: center;'>
-            <h1 style='color: white; margin: 0;'>{total_score}/20</h1>
-            <h2 style='color: white; margin: 10px 0;'>Grade: {grade}</h2>
-            <h3 style='color: white; margin: 10px 0;'>{bobblehead}</h3>
-            <p style='color: white; margin: 0;'>{message}</p>
+        <div style='background: {gradient}; padding: 2.5rem 1.5rem; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); margin: 1.5rem 0;'>
+            <div style='font-size: 5rem; margin: 0;'>{emoji}</div>
+            <h1 style='color: white; margin: 1rem 0; font-size: 4rem;'>{total_score}/20</h1>
+            <h2 style='color: white; margin: 0.5rem 0; font-size: 2rem;'>Grade: {grade}</h2>
+            <h3 style='color: white; margin: 0.5rem 0; font-size: 2rem;'>{bobblehead}</h3>
+            <p style='color: white; margin: 0.5rem 0; font-size: 1.3rem; font-weight: 500;'>{message}</p>
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("---")
-        
-        # Section Scores
+        # Section Scores with progress bars
         st.markdown("### 📊 Section Breakdown")
-        st.metric("Pre-Market", f"{prep_score}/4", delta=None)
-        st.metric("Execution", f"{exec_score}/8", delta=None)
-        st.metric("Emotional", f"{emot_score}/5", delta=None)
-        st.metric("Post-Market", f"{post_score}/3", delta=None)
+        
+        col_s1, col_s2 = st.columns(2)
+        with col_s1:
+            st.metric("🌅 Pre-Market", f"{prep_score}/2")
+            st.metric("🧠 Emotional", f"{emot_score}/4")
+        with col_s2:
+            st.metric("⚡ Execution", f"{exec_score}/8")
+            st.metric("📝 Post-Market", f"{post_score}/6")
         
         st.markdown("---")
         
         # Bobblehead status
-        bobblehead_moved = "✅ Yes" if total_score >= 15 else "❌ No"
-        st.markdown(f"### Bobblehead Moved?")
-        st.markdown(f"## {bobblehead_moved}")
+        bobblehead_moved = total_score >= 15
         
-        if total_score >= 15:
-            st.success("Your expected value increased today! 🎉")
+        if bobblehead_moved:
+            st.markdown("""
+            <div style='background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%); 
+                        padding: 1.5rem; border-radius: 15px; text-align: center;'>
+                <h3 style='color: white; margin: 0;'>Bobblehead Moved?</h3>
+                <h1 style='color: white; margin: 0.5rem 0; font-size: 3rem;'>✅ YES</h1>
+                <p style='color: white; margin: 0;'>Your expected value increased today! 🎉</p>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            st.warning("Focus on improvement tomorrow")
+            st.markdown("""
+            <div style='background: linear-gradient(135deg, #f12711 0%, #f5af19 100%); 
+                        padding: 1.5rem; border-radius: 15px; text-align: center;'>
+                <h3 style='color: white; margin: 0;'>Bobblehead Moved?</h3>
+                <h1 style='color: white; margin: 0.5rem 0; font-size: 3rem;'>❌ NO</h1>
+                <p style='color: white; margin: 0;'>Focus on improvement tomorrow</p>
+            </div>
+            """, unsafe_allow_html=True)
     
     # Submit button
     st.markdown("---")
@@ -192,7 +350,7 @@ if page == "📝 Daily Entry":
             'emot_score': emot_score,
             'post_score': post_score,
             'total_score': total_score,
-            'bobblehead_moved': total_score >= 15,
+            'bobblehead_moved': bobblehead_moved,
             'thing_well': thing_well,
             'thing_improve': thing_improve,
             'what_learned': what_learned
@@ -213,10 +371,10 @@ if page == "📝 Daily Entry":
 
 # ========== DASHBOARD PAGE ==========
 elif page == "📈 Dashboard":
-    st.header("Dashboard - Your Bobblehead Movement")
+    st.header("📈 Dashboard - Your Bobblehead Movement")
     
     if not st.session_state.scorecards:
-        st.warning("No scorecard data yet. Complete your first daily entry!")
+        st.warning("📭 No scorecard data yet. Complete your first daily entry!")
     else:
         df = pd.DataFrame(st.session_state.scorecards)
         df['date'] = pd.to_datetime(df['date'])
@@ -237,7 +395,7 @@ elif page == "📈 Dashboard":
             col2.metric("Bobblehead Moved", today_bobblehead)
             col3.metric("P&L", f"${today_pnl:,.2f}")
         else:
-            st.info("No scorecard entry for today yet")
+            st.info("📝 No scorecard entry for today yet")
         
         st.markdown("---")
         
@@ -297,19 +455,19 @@ elif page == "📈 Dashboard":
         section_data = section_data.sort_values('date')
         
         fig3 = go.Figure()
-        fig3.add_trace(go.Bar(name='Pre-Market', x=section_data['date'], y=section_data['prep_score']))
-        fig3.add_trace(go.Bar(name='Execution', x=section_data['date'], y=section_data['exec_score']))
-        fig3.add_trace(go.Bar(name='Emotional', x=section_data['date'], y=section_data['emot_score']))
-        fig3.add_trace(go.Bar(name='Post-Market', x=section_data['date'], y=section_data['post_score']))
+        fig3.add_trace(go.Bar(name='Pre-Market', x=section_data['date'], y=section_data['prep_score'], marker_color='#ffc107'))
+        fig3.add_trace(go.Bar(name='Execution', x=section_data['date'], y=section_data['exec_score'], marker_color='#4caf50'))
+        fig3.add_trace(go.Bar(name='Emotional', x=section_data['date'], y=section_data['emot_score'], marker_color='#2196f3'))
+        fig3.add_trace(go.Bar(name='Post-Market', x=section_data['date'], y=section_data['post_score'], marker_color='#9c27b0'))
         fig3.update_layout(barmode='stack', title='Section Scores Over Time', height=400)
         st.plotly_chart(fig3, use_container_width=True)
 
 # ========== HISTORY PAGE ==========
 elif page == "📅 History":
-    st.header("Scorecard History")
+    st.header("📅 Scorecard History")
     
     if not st.session_state.scorecards:
-        st.warning("No scorecard data yet. Complete your first daily entry!")
+        st.warning("📭 No scorecard data yet. Complete your first daily entry!")
     else:
         df = pd.DataFrame(st.session_state.scorecards)
         df['date'] = pd.to_datetime(df['date'])
@@ -410,6 +568,30 @@ else:
     | 6-8 | D | Below standard. EV decreased. |
     | 0-5 | F | Poor execution. Significant EV decrease. |
     
+    ### Your Scorecard Structure
+    
+    **🌅 Pre-Market Preparation (2 points)**
+    - Emotional check
+    - Trading plan ready
+    
+    **⚡ Trade Execution Discipline (8 points)**
+    - Following entry/exit rules
+    - Position sizing
+    - Risk management
+    - Emotional discipline during trading
+    
+    **🧠 Emotional Management (4 points)**
+    - Managing reactions to wins/losses
+    - Process focus over outcome
+    
+    **📝 Post-Market Review (6 points)**
+    - Journaling trades
+    - Market assessment
+    - Position review
+    - Risk calculation
+    - Statistics tracking
+    - Next-day preparation
+    
     ### Focus on Process, Not Outcome
     
     As marathon runner Maro Yugata said:
@@ -435,20 +617,11 @@ else:
     3. **History:** Track long-term trends
     4. **Focus:** On process improvement, not P&L
     
-    **Remember:** A losing day with a 18/20 score is better than a winning day with a 8/20 score.
+    **Remember:** A losing day with an 18/20 score is better than a winning day with an 8/20 score.
     
     ---
     
     *Built for Mo's Trading Journey - $5M by Age 59*
+    
+    *"Pas de Sentiment en business. Froid comme la glace."* - Moubass
     """)
-
-# Footer
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🎯 Quick Stats")
-if st.session_state.scorecards:
-    df = pd.DataFrame(st.session_state.scorecards)
-    st.sidebar.metric("Total Entries", len(df))
-    st.sidebar.metric("Avg Score", f"{df['total_score'].mean():.1f}/20")
-    st.sidebar.metric("Success Rate", f"{(df['total_score'] >= 15).sum()}/{len(df)}")
-else:
-    st.sidebar.info("No data yet")
